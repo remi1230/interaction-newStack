@@ -4,7 +4,7 @@ export default function RightPanel() {
   const {
     nb, speed, pointRadius, trailAlpha, bgColor, tintColor,
     modRadius, modStrength, modRotation,
-    placing, setParam, setPlacing
+    placing, setParam, setPlacing, clearCanvas
   } = useParams();
 
   const hex = (n: number) => "#" + n.toString(16).padStart(6, "0");
@@ -12,6 +12,8 @@ export default function RightPanel() {
   return (
     <aside
       style={{
+        display: 'flex',
+        flexDirection: 'column',
         color: "#eee",
         background: "#111",
         padding: "12px 16px",
@@ -25,7 +27,7 @@ export default function RightPanel() {
       <input
         type="range"
         min={1}
-        max={20000}
+        max={5000}
         value={nb}
         onChange={(e) => setParam("nb", +e.target.value)}
       />
@@ -107,7 +109,7 @@ export default function RightPanel() {
       <input
         type="range"
         min={-3}
-        max={3}
+        max={7}
         step={0.01}
         value={modStrength}
         onChange={(e) => setParam("modStrength", +e.target.value)}
@@ -138,6 +140,9 @@ export default function RightPanel() {
         value={hex(bgColor)}
         onChange={(e) => setParam("bgColor", parseInt(e.target.value.slice(1), 16))}
       />
+
+      <hr />
+      <button onClick={clearCanvas}>Effacer le canvas</button>
     </aside>
   );
 }

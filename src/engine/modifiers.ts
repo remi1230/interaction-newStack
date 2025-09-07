@@ -54,8 +54,8 @@ export function clearModifiers() {
 }
 
 export function rebuildGrid() {
-  grid.clear();
-  for (const m of modifiers) grid.insert(m);
+  /*grid.clear();
+  for (const m of modifiers) grid.insert(m);*/
 }
 
 function falloff(d: number, R: number, kind?: Modifier["falloff"]) {
@@ -63,44 +63,53 @@ function falloff(d: number, R: number, kind?: Modifier["falloff"]) {
   return kind === "smoothstep" ? t * t * (3 - 2 * t) : t;
 }
 
+const EPS = 1e-3;           // seuil de distance ~0
+const KICK = 0.35;          // amplitude de la micro-poussée (à ajuster)
+const FMAX = 3.0;           // borne de sécurité sur la force locale (optionnelle)
 // 🔹 Calcul de la force appliquée par tous les modifiers proches
 export function steer(x: number, y: number) {
   let ax = 0, ay = 0;
 
-  // ✅ recherche élargie en fonction du plus grand rayon posé
-  // (si aucun mod, on met 1 pour éviter n=0)
-  const near = (grid as any).nearbyRadius
-    ? (grid as any).nearbyRadius(x, y, Math.max(1, maxRadius || 1))
-    : grid.nearby(x, y); // fallback si nearbyRadius n’existe pas encore
-
-  for (const m of near as Modifier[]) {
+  for (const m of modifiers) {
     const dx = m.x - x, dy = m.y - y;
-    const d2 = dx * dx + dy * dy;
-    if (d2 <= 1) continue;
-    const d = Math.sqrt(d2);
-    if (d > m.r) continue;
+    const d2 = dx*dx + dy*dy;
+    const d  = Math.sqrt(d2);
 
-    const w = falloff(d, m.r, m.falloff) * (m.sign ?? 1);
+    // 1) Si on est "pile" au centre (ou quasi), on injecte un petit bruit directionnel
+    if (d < EPS) {
+      // bruit proportionnel à l'intensité du mod (attract + rot)
+      const s = (Math.abs(m.str ?? 0) + Math.abs(m.rot ?? 0)) || 1;
+      const th = Math.random() * Math.PI * 2;
+      ax += Math.cos(th) * KICK * s;
+      ay += Math.sin(th) * KICK * s;
+      continue; // on passe au mod suivant
+    }
 
-    // Attraction
+    // 2) Poids d'atténuation global (jamais 0), R = échelle (pas cutoff)
+    const scale = Math.max(1e-6, m.r || 1);
+    const xnorm = d / scale;
+    // loi douce (jamais nulle) : 1 / (1 + x^2)
+    const w = (1 / (1 + xnorm * xnorm)) * (m.sign ?? 1);
+
+    // 3) Direction unitaire sûre (évite division par 0)
+    const invd = 1 / d;
+    const ux = dx * invd;
+    const uy = dy * invd;
+
+    // 4) Contributions, bornées pour éviter une force démesurée très près du centre
     if (m.type === "attractor" || m.str) {
-      const s = (m.str ?? 0) * w;
-      ax += (dx / d) * s;
-      ay += (dy / d) * s;
+      let s = (m.str ?? 0) * w;
+      s = Math.max(-FMAX, Math.min(FMAX, s));
+      ax += ux * s;
+      ay += uy * s;
     }
 
-    // Rotation (vortex)
     if (m.type === "rotator" || m.rot) {
-      const s = (m.rot ?? 0) * w;
-      ax += (-dy / d) * s;
-      ay += (dx / d) * s;
+      let s = (m.rot ?? 0) * w;
+      s = Math.max(-FMAX, Math.min(FMAX, s));
+      ax += (-uy) * s;  // tangent = rotation de (ux,uy)
+      ay += ( ux) * s;
     }
-
-    // 👉 Ici tu pourras ajouter les autres types :
-    // - polygonator
-    // - spiralor
-    // - deviator...
-    // En branchant une formule spécifique pour chacun.
   }
 
   return { ax, ay };
