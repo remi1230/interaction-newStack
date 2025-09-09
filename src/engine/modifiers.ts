@@ -53,16 +53,6 @@ export function clearModifiers() {
   maxRadius = 0;                                  // 🔸 reset du rayon max
 }
 
-export function rebuildGrid() {
-  /*grid.clear();
-  for (const m of modifiers) grid.insert(m);*/
-}
-
-function falloff(d: number, R: number, kind?: Modifier["falloff"]) {
-  const t = Math.max(0, Math.min(1, 1 - d / R));
-  return kind === "smoothstep" ? t * t * (3 - 2 * t) : t;
-}
-
 const EPS = 1e-3;           // seuil de distance ~0
 const KICK = 0.35;          // amplitude de la micro-poussée (à ajuster)
 const FMAX = 3.0;           // borne de sécurité sur la force locale (optionnelle)

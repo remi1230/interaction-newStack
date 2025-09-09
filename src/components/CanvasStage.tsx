@@ -1,41 +1,59 @@
 // src/components/CanvasStage.tsx
 import { useEffect, useRef } from "react";
-import { createPixiEngine, EngineAPI } from "../engine/pixiEngine";
+import { createPixiEngine } from "../engine/pixiEngine";
 import { useParams } from "../store/params";
+
+type EngineInstance = Awaited<ReturnType<typeof createPixiEngine>>;
 
 export default function CanvasStage() {
   const hostRef = useRef<HTMLDivElement>(null);
-  const { placing, modRadius, modStrength, modRotation } = useParams();
+  const engineRef = useRef<EngineInstance | null>(null);
+
+  const { placing } = useParams();
 
   useEffect(() => {
-    let disposed = false;
+    let isMounted = true;
+
     (async () => {
-      const engine = await createPixiEngine(hostRef.current!);
-      if (disposed) engine.dispose();
+      const host = hostRef.current;
+      if (!host) return;
+
+      const engine = await createPixiEngine(host);
+
+      if (!isMounted) {
+        // Si le composant s’est démonté pendant l’await, on nettoie aussitôt
+        engine.dispose?.();
+        return;
+      }
+      engineRef.current = engine;
     })();
-    return () => { disposed = true; };
+
+    return () => {
+      isMounted = false;
+      // Nettoyage complet à l’unmount (évite ticker/RAF/listeners fantômes)
+      try {
+        engineRef.current?.dispose?.();
+      } finally {
+        engineRef.current = null;
+      }
+    };
   }, []);
 
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!placing) return;
-    const rect = hostRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left, y = e.clientY - rect.top;
-
-    if (placing === "attractor") {
-      EngineAPI.addAttractor({ x, y }, { r: modRadius, str: modStrength });
-      console.log("Attractor posé", { x, y, r: modRadius, str: modStrength });
-    } else if (placing === "rotator") {
-      EngineAPI.addRotator({ x, y }, { r: modRadius, rot: modRotation });
-      console.log("Rotator posé", { x, y, r: modRadius, rot: modRotation });
-    }
-  };
-
   return (
-    <div ref={hostRef} style={{ position: "relative", width: "100%", height: "100%" }}>
-      {/* couche de clic au-dessus du canvas */}
+    <div
+      ref={hostRef}
+      style={{ position: "relative", width: "100%", height: "100%" }}
+    >
+      {/* Couche de clic au-dessus du canvas : active uniquement en mode placing */}
       <div
-        onPointerDown={onPointerDown}
-        style={{ position: "absolute", inset: 0, cursor: placing ? "crosshair" : "default", zIndex: 2 }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          cursor: placing ? "crosshair" : "default",
+          zIndex: 2,
+          // Important : ne pas bloquer les interactions Pixi quand on ne place pas
+          pointerEvents: placing ? "auto" : "none",
+        }}
       />
     </div>
   );

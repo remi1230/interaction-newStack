@@ -2,7 +2,7 @@ import { useParams } from "../store/params";
 
 export default function RightPanel() {
   const {
-    nb, speed, pointRadius, trailAlpha, bgColor, tintColor,
+    nb, speed, pointRadius, trailAlpha, bgColor, tintColor, lightColor, saturationColor,
     modRadius, modStrength, modRotation,
     placing, setParam, setPlacing, clearCanvas
   } = useParams();
@@ -60,6 +60,26 @@ export default function RightPanel() {
         step={0.01}
         value={trailAlpha}
         onChange={(e) => setParam("trailAlpha", +e.target.value)}
+      />
+
+      <label>Light: {(lightColor * 100).toFixed(0)}</label>
+      <input
+        type="range"
+        min={0.00}
+        max={1}
+        step={0.01}
+        value={lightColor}
+        onChange={(e) => setParam("lightColor", +e.target.value)}
+      />
+
+      <label>Saturation: {(saturationColor * 100).toFixed(0)}</label>
+      <input
+        type="range"
+        min={0.00}
+        max={1}
+        step={0.01}
+        value={saturationColor}
+        onChange={(e) => setParam("saturationColor", +e.target.value)}
       />
 
       <hr />
@@ -127,19 +147,25 @@ export default function RightPanel() {
 
       <hr />
 
-      <label>Tint</label>
-      <input
-        type="color"
-        value={hex(tintColor)}
-        onChange={(e) => setParam("tintColor", parseInt(e.target.value.slice(1), 16))}
-      />
-
-      <label>Fond</label>
-      <input
-        type="color"
-        value={hex(bgColor)}
-        onChange={(e) => setParam("bgColor", parseInt(e.target.value.slice(1), 16))}
-      />
+      <div style={{ display: 'flex', gap: '10px', }}>
+        <div style={{ display: 'flex', gap: '5px', flexDirection: 'column' }}>
+          <label>Fond</label>
+          <input
+            type="color"
+            value={hex(bgColor)}
+            onChange={(e) => setParam("bgColor", parseInt(e.target.value.slice(1), 16))}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '5px', flexDirection: 'column'  }}>
+          <label>Tint</label>
+          <input
+            type="color"
+            value={hex(tintColor)}
+            onChange={(e) => setParam("tintColor", parseInt(e.target.value.slice(1), 16))}
+          />
+        </div>
+      </div>
+      
 
       <hr />
       <button onClick={clearCanvas}>Effacer le canvas</button>
